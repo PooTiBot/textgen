@@ -1,14 +1,17 @@
 import opentype from "opentype.js";
+import { TEXTGEN_FONT_BASE64 } from "../assets/textGenFont";
 
-const FONT_URL = "/fonts/TextGen3D-Sans.ttf";
+function base64ToArrayBuffer(base64: string) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
 
-export async function loadFont() {
-    const response = await fetch(FONT_URL);
-
-    if (!response.ok) {
-        throw new Error(`Не удалось загрузить шрифт: ${response.status}`);
+    for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
     }
 
-    const buffer = await response.arrayBuffer();
-    return opentype.parse(buffer);
+    return bytes.buffer;
+}
+
+export async function loadFont() {
+    return opentype.parse(base64ToArrayBuffer(TEXTGEN_FONT_BASE64));
 }
