@@ -7,11 +7,16 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "verify:fonts": "node scripts/verify-fonts.mjs",
+    "verify:export": "node scripts/verify-export-geometry.mjs",
+    "verify:tolerance": "node scripts/verify-tolerance.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
+    "clipper2-ts": "^2.0.1-18",
+    "fflate": "^0.8.3",
     "opentype.js": "^2.0.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

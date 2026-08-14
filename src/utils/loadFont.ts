@@ -1,17 +1,27 @@
 import opentype from "opentype.js";
-import { TEXTGEN_FONT_BASE64 } from "../assets/textGenFont";
+import type { Font } from "opentype.js";
 
-function base64ToArrayBuffer(base64: string) {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
+const fontCache = new Map<string, Promise<Font>>();
 
-    for (let i = 0; i < binary.length; i += 1) {
-        bytes[i] = binary.charCodeAt(i);
+async function fetchFont(file: string) {
+    const response = await fetch(file);
+
+    if (!response.ok) {
+        throw new Error(`${response.status} ${response.statusText}: ${file}`);
     }
 
-    return bytes.buffer;
+    return opentype.parse(await response.arrayBuffer());
 }
 
-export async function loadFont() {
-    return opentype.parse(base64ToArrayBuffer(TEXTGEN_FONT_BASE64));
+export function loadFont(file: string) {
+    const cachedFont = fontCache.get(file);
+    if (cachedFont) return cachedFont;
+
+    const font = fetchFont(file);
+    fontCache.set(file, font);
+    void font.catch(() => {
+        if (fontCache.get(file) === font) fontCache.delete(file);
+    });
+
+    return font;
 }
