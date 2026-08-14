@@ -9,6 +9,8 @@
     "lint": "oxlint",
     "verify:fonts": "node scripts/verify-fonts.mjs",
     "verify:export": "node scripts/verify-export-geometry.mjs",
+    "verify:keychain": "node scripts/verify-keychain.mjs",
+    "verify:led-sign": "node scripts/verify-led-sign.mjs",
     "verify:tolerance": "node scripts/verify-tolerance.mjs",
     "preview": "vite preview"
   },

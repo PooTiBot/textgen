@@ -2,14 +2,22 @@ import type { Font } from "opentype.js";
 import * as THREE from "three";
 import { createDecorationGeometry } from "../decorations/geometry";
 import type { DecorationItem } from "../decorations/types";
-import { createPanelFrameGeometry, createPanelGeometry, getAutoPanelDimensions } from "../panel/geometry";
+import { createPanelFrameGeometry, getAutoPanelDimensions } from "../panel/geometry";
 import type { PanelSettings } from "../panel/types";
+import {
+  createPanelWithPhotoWindowGeometry,
+  createPhotoInnerFrameGeometry,
+  getPhotoWindowOuterBounds,
+} from "../photoWindow/geometry";
+import type { PhotoWindowSettings } from "../photoWindow/types";
 import { createExtraTextGeometry, createGeometryFromShapes, createTextShapes } from "../textItems/geometry";
 import type { ExtraTextItem } from "../textItems/types";
 import { createNamePocket } from "../tolerance/createNamePocket";
 import { shapesToClipperPaths, transformClipperPaths } from "../tolerance/polygonUtils";
 import type { NamePocketSettings } from "../tolerance/types";
 import type { PrintablePart } from "./PrintablePart";
+import { createPrintablePart } from "./createPrintablePart";
+import { finalizePrintableParts } from "./finalizePrintableParts";
 import { placeGeometryBackAt, placeGeometryFrontAt } from "./zPlacement";
 
 type Bounds2D = {
@@ -37,6 +45,7 @@ export type BuildPrintablePartsOptions = {
   nameOffsetX: number;
   nameOffsetY: number;
   panelSettings: PanelSettings;
+  photoWindowSettings: PhotoWindowSettings;
   decorations: readonly DecorationItem[];
   extraTextItems: readonly ExtraTextItem[];
   pocketSettings: NamePocketSettings;
@@ -59,26 +68,6 @@ function expandBounds(bounds: Bounds2D, box: THREE.Box3) {
   bounds.maxX = Math.max(bounds.maxX, box.max.x);
   bounds.minY = Math.min(bounds.minY, box.min.y);
   bounds.maxY = Math.max(bounds.maxY, box.max.y);
-}
-
-function createPart(
-  id: string,
-  type: PrintablePart["type"],
-  name: string,
-  fileName: string,
-  geometry: THREE.BufferGeometry,
-  previewVisible = true,
-): PrintablePart {
-  return {
-    id,
-    type,
-    name,
-    fileName,
-    geometry,
-    matrix: new THREE.Matrix4(),
-    enabled: true,
-    previewVisible,
-  };
 }
 
 export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltPrintableParts {
@@ -144,7 +133,7 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
   nameGeometry.computeBoundingBox();
 
   const initialPart = initialGeometry
-    ? createPart(
+    ? createPrintablePart(
       "initial",
       "initialLetter",
       "Большая буква",
@@ -152,7 +141,7 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
       initialGeometry,
     )
     : null;
-  const namePart = createPart(
+  const namePart = createPrintablePart(
     "name",
     "mainName",
     "Основное имя",
@@ -162,7 +151,7 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
   );
   const decorationParts = options.decorations
     .filter((item) => item.enabled)
-    .map((item, index) => createPart(
+    .map((item, index) => createPrintablePart(
       `decoration:${item.id}`,
       "decoration",
       `Декор ${index + 1}`,
@@ -173,7 +162,7 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
     .filter((item) => item.enabled && item.text.trim() && options.fonts.extra.has(item.fontId))
     .map((item, index) => {
     const font = options.fonts.extra.get(item.fontId);
-    return createPart(
+    return createPrintablePart(
         `extra-text:${item.id}`,
         "extraText",
         `Дополнительный текст ${index + 1}`,
@@ -198,6 +187,9 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
     part.geometry.computeBoundingBox();
     expandBounds(contentBounds, part.geometry.boundingBox!);
   });
+  if (options.panelSettings.enabled && options.photoWindowSettings.enabled) {
+    expandBounds(contentBounds, getPhotoWindowOuterBounds(options.photoWindowSettings));
+  }
 
   const contentWidth = contentBounds.maxX - contentBounds.minX;
   const contentHeight = contentBounds.maxY - contentBounds.minY;
@@ -215,11 +207,14 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
         options.panelSettings.padding,
       )
       : { width: options.panelSettings.width, height: options.panelSettings.height };
-    const panelGeometry = createPanelGeometry(
+    const panelGeometry = createPanelWithPhotoWindowGeometry(
       options.panelSettings.shape,
       panelDimensions.width,
       panelDimensions.height,
       options.panelSettings.thickness,
+      options.photoWindowSettings,
+      options.photoWindowSettings.x - contentCenterX,
+      options.photoWindowSettings.y - contentCenterY,
     );
     const panelBox = panelGeometry.boundingBox!;
     panelGeometry.translate(
@@ -228,13 +223,38 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
       0,
     );
     panelFrontZ = placeGeometryFrontAt(panelGeometry, -options.panelSettings.offsetZ);
-    panelParts.push(createPart(
+    panelParts.push(createPrintablePart(
       "panel",
       "backPanel",
       "Задняя панель",
       "panel",
       panelGeometry,
     ));
+
+    if (options.photoWindowSettings.enabled) {
+      const photoFrameGeometry = createPhotoInnerFrameGeometry(options.photoWindowSettings);
+      if (photoFrameGeometry) {
+        photoFrameGeometry.translate(
+          options.photoWindowSettings.x,
+          options.photoWindowSettings.y,
+          0,
+        );
+        placeGeometryBackAt(
+          photoFrameGeometry,
+          panelGeometry.boundingBox!.max.z
+            + (options.photoWindowSettings.innerFrameEnabled
+              ? options.photoWindowSettings.innerFrameOffsetZ
+              : 0),
+        );
+        panelParts.push(createPrintablePart(
+          "photo-frame",
+          "photoFrame",
+          "Внутренняя рамка фотографии",
+          "photo-frame",
+          photoFrameGeometry,
+        ));
+      }
+    }
 
     if (options.panelSettings.frameEnabled) {
       const frameGeometry = createPanelFrameGeometry(
@@ -255,7 +275,7 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
         frameGeometry,
         translatedPanelBox.max.z + options.panelSettings.frameOffsetZ,
       );
-      panelParts.push(createPart(
+      panelParts.push(createPrintablePart(
         "frame",
         "panelFrame",
         "Рамка панели",
@@ -282,29 +302,10 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
   });
 
   const parts = [...panelParts, ...contentParts];
-  const compositionBox = new THREE.Box3();
-  parts.forEach((part) => {
-    part.geometry.computeBoundingBox();
-    compositionBox.union(part.geometry.boundingBox!);
-  });
-  const compositionSize = compositionBox.getSize(new THREE.Vector3());
-  const compositionCenter = compositionBox.getCenter(new THREE.Vector3());
-  const previewScale = 4.8 / Math.max(compositionSize.x, compositionSize.y, 1);
-  const compositionMatrix = new THREE.Matrix4().makeTranslation(
-    -compositionCenter.x,
-    -compositionCenter.y,
-    0,
-  );
-  parts.forEach((part) => {
-    part.matrix.copy(compositionMatrix);
-  });
+  const finalized = finalizePrintableParts(parts);
 
   return {
-    parts,
-    previewScale,
-    centerX: compositionCenter.x,
-    centerY: compositionCenter.y,
-    centerZ: compositionCenter.z,
+    ...finalized,
     panelFrontZ,
     pocketCreated: Boolean(pocketResult),
   };

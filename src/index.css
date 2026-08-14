@@ -16,6 +16,12 @@ button { color: inherit; }
 .header { height: 64px; flex: 0 0 64px; border-bottom: 1px solid #2d2d2d; display: flex; align-items: center; gap: 18px; padding: 0 24px; background: #202020; }
 .header h1 { font-size: 24px; }
 .header span { color: #8f96a3; font-size: 13px; }
+.brand { min-width: 0; display: flex; align-items: baseline; gap: 18px; }
+.generator-switcher { margin-left: auto; display: flex; gap: 7px; padding: 4px; border: 1px solid #343a42; border-radius: 11px; background: #171a1e; }
+.generator-switcher button { min-height: 34px; padding: 6px 13px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #939da8; font-size: 11px; font-weight: 700; cursor: pointer; }
+.generator-switcher button:hover { color: #dce5ec; background: rgb(255 255 255 / 4%); }
+.generator-switcher button.is-active { border-color: #4d8dbb; background: rgb(100 181 246 / 16%); color: #a9dcff; }
+.generator-switcher button:focus-visible { outline: 2px solid #64b5f6; outline-offset: 2px; }
 .workspace { width: 100%; flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; overflow: clip; }
 .sidebar { width: 340px; height: 100%; flex: 0 0 340px; min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; border-right: 1px solid #2d2d2d; background: #1d1d1d; padding: 24px; }
 .sidebar h2 { margin-bottom: 22px; font-size: 20px; }
@@ -108,6 +114,22 @@ button { color: inherit; }
 .export-note { margin-top: 9px; color: #737e89; font-size: 9px; line-height: 1.4; text-align: center; }
 .font-error { margin: -8px 0 20px; padding: 10px 12px; border: 1px solid #713b43; border-radius: 8px; background: #2b1b1e; color: #ffadb7; font-size: 12px; line-height: 1.4; }
 .hint { padding: 13px; border: 1px solid #30343a; border-radius: 9px; background: #181a1d; color: #8f96a3; font-size: 12px; line-height: 1.55; }
+.keychain-presets { margin: 0 0 24px; padding: 16px; border: 1px solid #3c4651; border-radius: 14px; background: linear-gradient(145deg, #242a31, #1b2025); }
+.sidebar .keychain-presets h2 { margin: 3px 0 13px; font-size: 18px; }
+.keychain-preset-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.keychain-preset-grid button { min-width: 0; min-height: 36px; padding: 6px 4px; border: 1px solid #3e4852; border-radius: 8px; background: #181d22; color: #aab4be; font-size: 9px; font-weight: 700; cursor: pointer; }
+.keychain-preset-grid button:hover { border-color: #5b788e; color: #eef7ff; }
+.keychain-preset-grid button.is-active { border-color: #64b5f6; background: rgb(100 181 246 / 14%); color: #a9dcff; }
+.keychain-preset-grid button:focus-visible { outline: 2px solid #64b5f6; outline-offset: 2px; }
+.led-preset-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
+.led-preset-grid button { min-height: 34px; padding: 7px 9px; border: 1px solid #3e4852; border-radius: 8px; background: #181d22; color: #aab4be; font-size: 10px; font-weight: 700; text-align: left; cursor: pointer; }
+.led-preset-grid button:hover { border-color: #5b788e; color: #eef7ff; }
+.led-preset-grid button.is-active { border-color: #64b5f6; background: rgb(100 181 246 / 14%); color: #a9dcff; }
+.led-preset-grid button:focus-visible { outline: 2px solid #64b5f6; outline-offset: 2px; }
+.keychain-presets > p, .keychain-info { color: #7f8994; font-size: 9px; line-height: 1.45; }
+.keychain-presets > p { margin-top: 10px; }
+.keychain-info { margin: -6px 0 17px; padding: 8px 9px; border: 1px solid #39434d; border-radius: 7px; background: #181d22; }
+.keychain-inlay-settings { padding-top: 16px; border-top: 1px solid #39424b; }
 .viewport { position: relative; height: 100%; flex: 1 1 auto; min-width: 0; min-height: 0; overflow: clip; background: #181818; isolation: isolate; }
 .viewport > div { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; overflow: hidden; }
 .viewport canvas { width: 100% !important; height: 100% !important; display: block; pointer-events: auto; touch-action: none; }
@@ -214,7 +236,10 @@ button { color: inherit; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
 
 @media (max-width: 720px) {
-  .header span { display: none; }
+  .brand span { display: none; }
+  .brand { gap: 0; }
+  .header { padding: 0 12px; }
+  .generator-switcher button { padding-right: 8px; padding-left: 8px; font-size: 9px; }
   .sidebar { width: 300px; flex-basis: 300px; padding: 18px; }
   .font-modal-backdrop { padding: 10px; }
   .font-modal { max-height: calc(100vh - 20px); border-radius: 14px; }

@@ -13,6 +13,14 @@ import type { PrintablePart } from "../src/parts/PrintablePart";
 import { buildPrintableParts } from "../src/parts/buildPrintableParts";
 import { createPanelFrameGeometry, createPanelGeometry } from "../src/panel/geometry";
 import type { PanelSettings, PanelShape } from "../src/panel/types";
+import {
+  createPanelWithPhotoWindowGeometry,
+  createPhotoInnerFrameGeometry,
+} from "../src/photoWindow/geometry";
+import {
+  DEFAULT_PHOTO_WINDOW_SETTINGS,
+  type PhotoWindowMode,
+} from "../src/photoWindow/types";
 import type { ExtraTextItem } from "../src/textItems/types";
 
 function makePart(
@@ -104,6 +112,7 @@ function runZPlacementCase(
       thickness: settings.panelThickness,
       offsetZ: settings.panelOffsetZ,
     },
+    photoWindowSettings: DEFAULT_PHOTO_WINDOW_SETTINGS,
     decorations: Z_DECORATIONS,
     extraTextItems: Z_EXTRA_TEXT,
     pocketSettings: {
@@ -173,6 +182,7 @@ function runDetachedInitialChecks(font: Font) {
       nameOffsetX: 0,
       nameOffsetY: 0,
       panelSettings: { ...PANEL_BASE, autoSize: true },
+      photoWindowSettings: DEFAULT_PHOTO_WINDOW_SETTINGS,
       decorations: [],
       extraTextItems: [],
       pocketSettings: {
@@ -203,6 +213,97 @@ function runDetachedInitialChecks(font: Font) {
   });
 
   return cases.length;
+}
+
+function runPhotoWindowChecks(font: Font) {
+  const modes: PhotoWindowMode[] = ["cutout", "recess", "frame-only"];
+  modes.forEach((mode) => {
+    const settings = {
+      ...DEFAULT_PHOTO_WINDOW_SETTINGS,
+      enabled: true,
+      mode,
+      width: 60,
+      height: 40,
+      x: 0,
+      y: 0,
+      padding: 1,
+      recessDepth: 1.5,
+    };
+    const geometry = createPanelWithPhotoWindowGeometry(
+      "rectangle",
+      180,
+      100,
+      8,
+      settings,
+      0,
+      0,
+    );
+    validateExportGeometry(geometry);
+    const hits = new THREE.Raycaster(
+      new THREE.Vector3(0, 0, 20),
+      new THREE.Vector3(0, 0, -1),
+    ).intersectObject(new THREE.Mesh(geometry));
+    if (mode === "cutout" && hits.length > 0) {
+      throw new Error("Photo cutout is not open through the panel.");
+    }
+    if (mode === "recess") {
+      if (hits.length === 0) throw new Error("Photo recess removed the entire pocket floor.");
+      assertClose("photo recess depth", 8 - hits[0].point.z, 1.5, 0.08);
+    }
+    if (mode === "frame-only" && hits.length === 0) {
+      throw new Error("Frame-only photo mode unexpectedly changed the panel surface.");
+    }
+    geometry.dispose();
+  });
+
+  const frameGeometry = createPhotoInnerFrameGeometry({
+    ...DEFAULT_PHOTO_WINDOW_SETTINGS,
+    enabled: true,
+    mode: "recess",
+    innerFrameEnabled: true,
+  });
+  if (!frameGeometry) throw new Error("Photo inner frame geometry was not created.");
+  const frameHits = new THREE.Raycaster(
+    new THREE.Vector3(0, 0, 20),
+    new THREE.Vector3(0, 0, -1),
+  ).intersectObject(new THREE.Mesh(frameGeometry));
+  if (frameHits.length > 0) throw new Error("Photo inner frame is solid instead of ring-shaped.");
+  frameGeometry.dispose();
+
+  const built = buildPrintableParts({
+    initialText: "П",
+    text: "Пример",
+    initialDepth: 8,
+    nameDepth: 5,
+    initialSize: 90,
+    nameSize: 30,
+    initialOffsetX: -45,
+    initialOffsetY: 0,
+    nameOffsetX: -20,
+    nameOffsetY: 0,
+    panelSettings: { ...PANEL_BASE, autoSize: true },
+    photoWindowSettings: {
+      ...DEFAULT_PHOTO_WINDOW_SETTINGS,
+      enabled: true,
+      mode: "recess",
+      x: 90,
+      innerFrameEnabled: true,
+    },
+    decorations: [],
+    extraTextItems: [],
+    pocketSettings: { enabled: false, tolerance: 0.2, depth: 2 },
+    showMainName: true,
+    fonts: { initial: font, name: font, extra: new Map() },
+  });
+  if (!built.parts.some((part) => part.id === "photo-frame")) {
+    throw new Error("Photo inner frame printable part is missing.");
+  }
+  const archive = unzipSync(createPartsZipArchive(createExportSnapshot(built.parts)));
+  if (!archive["photo-frame.stl"] || archive["photo-frame.stl"].length <= 84) {
+    throw new Error("Separate photo-frame STL is missing.");
+  }
+  built.parts.forEach((part) => part.geometry.dispose());
+  return modes.length;
 }
 
 export function runExportGeometryCheck(fontBuffer: ArrayBuffer) {
@@ -247,7 +348,15 @@ export function runExportGeometryCheck(fontBuffer: ArrayBuffer) {
     new THREE.Vector3(0, 0, 20),
     new THREE.Vector3(0, 0, -1),
   );
-  const frameShapes: PanelShape[] = ["rectangle", "rounded-rectangle", "oval"];
+  const frameShapes: PanelShape[] = [
+    "rectangle",
+    "rounded-rectangle",
+    "oval",
+    "cloud",
+    "plaque",
+    "arch",
+    "hexagon",
+  ];
   frameShapes.forEach((shape) => {
     const ring = createPanelFrameGeometry(shape, 180, 100, 5, 3);
     const ringMesh = new THREE.Mesh(ring);
@@ -269,6 +378,7 @@ export function runExportGeometryCheck(fontBuffer: ArrayBuffer) {
   ];
   zCases.forEach((settings) => runZPlacementCase(font, settings));
   const detachedCases = runDetachedInitialChecks(font);
+  const photoWindowCases = runPhotoWindowChecks(font);
 
   const result = {
     width: snapshot.size.width,
@@ -279,6 +389,7 @@ export function runExportGeometryCheck(fontBuffer: ArrayBuffer) {
     parts: snapshot.partCount,
     zCases: zCases.length,
     detachedCases,
+    photoWindowCases,
   };
 
   panel.dispose();

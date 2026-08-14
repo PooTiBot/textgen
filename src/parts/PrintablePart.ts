@@ -5,6 +5,12 @@ export type PrintablePartType =
   | "panelFrame"
   | "initialLetter"
   | "mainName"
+  | "keychainBase"
+  | "keychainText"
+  | "ledBase"
+  | "ledWalls"
+  | "ledCaps"
+  | "photoFrame"
   | "decoration"
   | "extraText";
 

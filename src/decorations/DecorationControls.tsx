@@ -12,9 +12,10 @@ type Props = {
     onAdd: () => string;
     onUpdate: (id: string, patch: Partial<DecorationItem>) => void;
     onRemove: (id: string) => void;
+    compact?: boolean;
 };
 
-export default function DecorationControls({ items, onAdd, onUpdate, onRemove }: Props) {
+export default function DecorationControls({ items, onAdd, onUpdate, onRemove, compact = false }: Props) {
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
     const addItem = () => {
@@ -39,7 +40,7 @@ export default function DecorationControls({ items, onAdd, onUpdate, onRemove }:
             </div>
 
             {items.length === 0 ? (
-                <p className="collection-empty">Добавьте звезду, сердце или другую фигуру на панель.</p>
+                <p className="collection-empty">Добавьте звезду, сердце или другую фигуру в композицию.</p>
             ) : (
                 <div className="item-editor-list">
                     {items.map((item, index) => {
@@ -89,11 +90,11 @@ export default function DecorationControls({ items, onAdd, onUpdate, onRemove }:
                                                 ))}
                                             </select>
                                         </label>
-                                        <RangeNumberControl id={`${item.id}-x`} label="Положение X" value={item.x} min={-300} max={300} disabled={!item.enabled} onChange={(x) => onUpdate(item.id, { x })} />
-                                        <RangeNumberControl id={`${item.id}-y`} label="Положение Y" value={item.y} min={-300} max={300} disabled={!item.enabled} onChange={(y) => onUpdate(item.id, { y })} />
+                                        <RangeNumberControl id={`${item.id}-x`} label="Положение X" value={item.x} min={compact ? -100 : -300} max={compact ? 100 : 300} disabled={!item.enabled} onChange={(x) => onUpdate(item.id, { x })} />
+                                        <RangeNumberControl id={`${item.id}-y`} label="Положение Y" value={item.y} min={compact ? -50 : -300} max={compact ? 50 : 300} disabled={!item.enabled} onChange={(y) => onUpdate(item.id, { y })} />
                                         <RangeNumberControl id={`${item.id}-z`} label="Смещение по Z, мм" value={item.z} min={-20} max={50} step={0.5} disabled={!item.enabled} onChange={(z) => onUpdate(item.id, { z })} />
-                                        <RangeNumberControl id={`${item.id}-size`} label="Размер" value={item.size} min={10} max={140} disabled={!item.enabled} onChange={(size) => onUpdate(item.id, { size })} />
-                                        <RangeNumberControl id={`${item.id}-depth`} label="Толщина, мм" value={item.depth} min={0.5} max={20} step={0.5} disabled={!item.enabled} onChange={(depth) => onUpdate(item.id, { depth })} />
+                                        <RangeNumberControl id={`${item.id}-size`} label="Размер" value={item.size} min={compact ? 3 : 10} max={compact ? 30 : 140} step={compact ? 0.5 : 1} disabled={!item.enabled} onChange={(size) => onUpdate(item.id, { size })} />
+                                        <RangeNumberControl id={`${item.id}-depth`} label="Толщина, мм" value={item.depth} min={compact ? 0.4 : 0.5} max={compact ? 6 : 20} step={compact ? 0.1 : 0.5} disabled={!item.enabled} onChange={(depth) => onUpdate(item.id, { depth })} />
                                         <RangeNumberControl id={`${item.id}-rotation`} label="Поворот, °" value={item.rotation} min={-180} max={180} disabled={!item.enabled} onChange={(rotation) => onUpdate(item.id, { rotation })} />
                                     </div>
                                 )}

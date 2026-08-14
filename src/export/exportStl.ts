@@ -36,12 +36,16 @@ function downloadBlob(blob: Blob, fileName: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-export function downloadBinaryStl(snapshot: ExportSnapshot, modelName: string) {
+export function downloadBinaryStl(
+  snapshot: ExportSnapshot,
+  modelName: string,
+  fileNamePrefix = "textgen3d",
+) {
   const geometry = createMergedExportGeometry(snapshot.parts);
 
   try {
     const data = geometryToBinaryStl(geometry);
-    downloadBlob(new Blob([data], { type: "model/stl" }), `textgen3d-${makeSafeBaseName(modelName)}.stl`);
+    downloadBlob(new Blob([data], { type: "model/stl" }), `${fileNamePrefix}-${makeSafeBaseName(modelName)}.stl`);
   } finally {
     geometry.dispose();
   }
@@ -56,11 +60,15 @@ function partToStl(part: PrintablePart) {
   }
 }
 
-export function downloadPartsZip(snapshot: ExportSnapshot, modelName: string) {
+export function downloadPartsZip(
+  snapshot: ExportSnapshot,
+  modelName: string,
+  fileNamePrefix = "textgen3d",
+) {
   const archive = createPartsZipArchive(snapshot);
   downloadBlob(
     new Blob([archive], { type: "application/zip" }),
-    `textgen3d-${makeSafeBaseName(modelName)}-parts.zip`,
+    `${fileNamePrefix}-${makeSafeBaseName(modelName)}-parts.zip`,
   );
 }
 

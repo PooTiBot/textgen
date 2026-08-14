@@ -49,7 +49,9 @@ function findDisconnectedParts(
   parts: readonly PrintablePart[],
   boxes: ReadonlyMap<string, THREE.Box3>,
 ) {
-  const panel = parts.find((part) => part.type === "backPanel");
+  const panel = parts.find((part) => (
+    part.type === "backPanel" || part.type === "keychainBase" || part.type === "ledWalls"
+  ));
   if (!panel) return [];
 
   const connected = new Set([panel.id]);
@@ -73,7 +75,7 @@ function findDisconnectedParts(
   }
 
   return parts
-    .filter((part) => part.type !== "backPanel" && !connected.has(part.id))
+    .filter((part) => part.id !== panel.id && !connected.has(part.id))
     .map((part) => part.id);
 }
 

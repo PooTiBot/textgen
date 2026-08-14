@@ -1,6 +1,8 @@
 export type DraggableObjectKind =
   | "initialLetter"
   | "mainName"
+  | "keychainText"
+  | "ledText"
   | "decoration"
   | "extraText";
 

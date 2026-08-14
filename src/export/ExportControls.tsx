@@ -5,6 +5,7 @@ import type { ExportSnapshot } from "./geometryUtils";
 type Props = {
   modelName: string;
   snapshot: ExportSnapshot | null;
+  fileNamePrefix?: string;
 };
 
 function formatMillimeters(value: number) {
@@ -12,7 +13,7 @@ function formatMillimeters(value: number) {
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
 
-export default function ExportControls({ modelName, snapshot }: Props) {
+export default function ExportControls({ modelName, snapshot, fileNamePrefix }: Props) {
   const [exportError, setExportError] = useState<string | null>(null);
   const hasConnectionWarning = Boolean(snapshot?.disconnectedPartIds.length);
 
@@ -20,7 +21,7 @@ export default function ExportControls({ modelName, snapshot }: Props) {
     if (!snapshot) return;
 
     try {
-      downloadBinaryStl(snapshot, modelName);
+      downloadBinaryStl(snapshot, modelName, fileNamePrefix);
       setExportError(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Неизвестная ошибка экспорта";
@@ -32,7 +33,7 @@ export default function ExportControls({ modelName, snapshot }: Props) {
     if (!snapshot) return;
 
     try {
-      downloadPartsZip(snapshot, modelName);
+      downloadPartsZip(snapshot, modelName, fileNamePrefix);
       setExportError(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Неизвестная ошибка экспорта";

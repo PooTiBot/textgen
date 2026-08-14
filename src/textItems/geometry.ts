@@ -2,7 +2,7 @@ import * as THREE from "three";
 import type { Font } from "opentype.js";
 import type { ExtraTextItem } from "./types";
 
-export function createTextShapes(font: Font, text: string, size: number) {
+export function createTextShapes(font: Font, text: string, size: number, letterSpacing = 0) {
     const shapePath = new THREE.ShapePath();
     const glyphs = Array.from(text, (character) => font.charToGlyph(character));
     const fontScale = size / font.unitsPerEm;
@@ -30,6 +30,7 @@ export function createTextShapes(font: Font, text: string, size: number) {
 
         if (glyphIndex < glyphs.length - 1) {
             cursorX += font.getKerningValue(glyph, glyphs[glyphIndex + 1]) * fontScale;
+            cursorX += letterSpacing;
         }
     }
 

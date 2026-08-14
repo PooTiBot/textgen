@@ -1,8 +1,11 @@
 import {
   FillRule,
+  EndType,
+  JoinType,
   PointInPolygonResult,
   areaD,
   pointInPolygonD,
+  inflatePathsD,
   unionD,
   type PathD,
   type PathsD,
@@ -46,6 +49,26 @@ export function shapesToClipperPaths(shapes: readonly THREE.Shape[]) {
   }
 
   return unionD(paths, [], FillRule.NonZero, CLIPPER_PRECISION);
+}
+
+export function offsetClipperPaths(paths: PathsD, delta: number) {
+  const unified = unionD(paths, [], FillRule.NonZero, CLIPPER_PRECISION);
+  if (Math.abs(delta) < 0.0001) return unified;
+
+  return unionD(
+    inflatePathsD(
+      unified,
+      delta,
+      JoinType.Round,
+      EndType.Polygon,
+      2,
+      CLIPPER_PRECISION,
+      0.02,
+    ),
+    [],
+    FillRule.NonZero,
+    CLIPPER_PRECISION,
+  );
 }
 
 export function transformClipperPaths(

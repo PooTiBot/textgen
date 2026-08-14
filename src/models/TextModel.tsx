@@ -11,6 +11,7 @@ import {
 } from "../parts/buildPrintableParts";
 import PrintablePartMesh, { type PrintablePartDragTarget } from "../parts/PrintablePartMesh";
 import type { PanelSettings } from "../panel/types";
+import type { PhotoWindowSettings } from "../photoWindow/types";
 import type { ExtraTextItem } from "../textItems/types";
 import type { NamePocketSettings } from "../tolerance/types";
 import { loadFont } from "../utils/loadFont";
@@ -29,6 +30,7 @@ type Props = {
     nameOffsetX: number;
     nameOffsetY: number;
     panelSettings: PanelSettings;
+    photoWindowSettings: PhotoWindowSettings;
     decorations: readonly DecorationItem[];
     extraTextItems: readonly ExtraTextItem[];
     pocketSettings: NamePocketSettings;
@@ -63,6 +65,7 @@ export default function TextModel({
     nameOffsetX,
     nameOffsetY,
     panelSettings,
+    photoWindowSettings,
     decorations,
     extraTextItems,
     pocketSettings,
@@ -137,6 +140,7 @@ export default function TextModel({
             nameOffsetX,
             nameOffsetY,
             panelSettings,
+            photoWindowSettings,
             decorations,
             extraTextItems,
             pocketSettings,
@@ -161,6 +165,7 @@ export default function TextModel({
         nameOffsetX,
         nameOffsetY,
         panelSettings,
+        photoWindowSettings,
         decorations,
         extraTextItems,
         pocketSettings,
