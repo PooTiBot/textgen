@@ -1,7 +1,28 @@
+import type { RefObject } from "react";
+import type * as THREE from "three";
+import useDraggableXY from "../interaction/useDraggableXY";
+import type {
+  DraggableObject,
+  XYBounds,
+  XYPosition,
+} from "../interaction/types";
 import type { PrintablePart, PrintablePartType } from "./PrintablePart";
+
+export type PrintablePartDragTarget = {
+  object: DraggableObject;
+  position: XYPosition;
+  bounds: XYBounds;
+  onPositionChange: (x: number, y: number) => void;
+};
 
 type Props = {
   part: PrintablePart;
+  selected: boolean;
+  coordinateRoot: RefObject<THREE.Group | null>;
+  dragTarget: PrintablePartDragTarget | null;
+  onSelect: (object: DraggableObject) => void;
+  onDragStart: (object: DraggableObject) => void;
+  onDragEnd: (object: DraggableObject) => void;
 };
 
 const PART_COLORS: Record<PrintablePartType, string> = {
@@ -13,13 +34,35 @@ const PART_COLORS: Record<PrintablePartType, string> = {
   extraText: "#e6f2ff",
 };
 
-export default function PrintablePartMesh({ part }: Props) {
+export default function PrintablePartMesh({
+  part,
+  selected,
+  coordinateRoot,
+  dragTarget,
+  onSelect,
+  onDragStart,
+  onDragEnd,
+}: Props) {
+  const dragHandlers = useDraggableXY({
+    enabled: Boolean(dragTarget),
+    object: dragTarget?.object ?? { id: part.id, kind: "decoration" },
+    position: dragTarget?.position ?? { x: 0, y: 0 },
+    bounds: dragTarget?.bounds ?? { minX: 0, maxX: 0, minY: 0, maxY: 0 },
+    coordinateRoot,
+    onPositionChange: dragTarget?.onPositionChange ?? (() => undefined),
+    onSelect,
+    onDragStart,
+    onDragEnd,
+  });
+
   if (!part.enabled || !part.previewVisible) return null;
 
   return (
-    <mesh geometry={part.geometry}>
+    <mesh geometry={part.geometry} {...(dragTarget ? dragHandlers : {})}>
       <meshStandardMaterial
         color={PART_COLORS[part.type]}
+        emissive={selected ? PART_COLORS[part.type] : "#000000"}
+        emissiveIntensity={selected ? 0.2 : 0}
         roughness={part.type === "backPanel" ? 0.48 : 0.4}
         metalness={part.type === "backPanel" ? 0.04 : 0}
       />

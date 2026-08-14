@@ -91,9 +91,9 @@ export default function DecorationControls({ items, onAdd, onUpdate, onRemove }:
                                         </label>
                                         <RangeNumberControl id={`${item.id}-x`} label="Положение X" value={item.x} min={-300} max={300} disabled={!item.enabled} onChange={(x) => onUpdate(item.id, { x })} />
                                         <RangeNumberControl id={`${item.id}-y`} label="Положение Y" value={item.y} min={-300} max={300} disabled={!item.enabled} onChange={(y) => onUpdate(item.id, { y })} />
-                                        <RangeNumberControl id={`${item.id}-z`} label="Положение Z" value={item.z} min={-20} max={50} disabled={!item.enabled} onChange={(z) => onUpdate(item.id, { z })} />
+                                        <RangeNumberControl id={`${item.id}-z`} label="Смещение по Z, мм" value={item.z} min={-20} max={50} step={0.5} disabled={!item.enabled} onChange={(z) => onUpdate(item.id, { z })} />
                                         <RangeNumberControl id={`${item.id}-size`} label="Размер" value={item.size} min={10} max={140} disabled={!item.enabled} onChange={(size) => onUpdate(item.id, { size })} />
-                                        <RangeNumberControl id={`${item.id}-depth`} label="Толщина" value={item.depth} min={1} max={30} disabled={!item.enabled} onChange={(depth) => onUpdate(item.id, { depth })} />
+                                        <RangeNumberControl id={`${item.id}-depth`} label="Толщина, мм" value={item.depth} min={0.5} max={20} step={0.5} disabled={!item.enabled} onChange={(depth) => onUpdate(item.id, { depth })} />
                                         <RangeNumberControl id={`${item.id}-rotation`} label="Поворот, °" value={item.rotation} min={-180} max={180} disabled={!item.enabled} onChange={(rotation) => onUpdate(item.id, { rotation })} />
                                     </div>
                                 )}

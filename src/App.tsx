@@ -41,7 +41,7 @@ function createDefaultDecoration(index: number): DecorationItem {
     type: DECORATION_TYPES[index % DECORATION_TYPES.length],
     x: position.x,
     y: position.y,
-    z: 1,
+    z: 0,
     size: 34,
     depth: 6,
     rotation: 0,
@@ -58,7 +58,7 @@ function createDefaultExtraText(index: number): ExtraTextItem {
     fontId: DEFAULT_NAME_FONT_ID,
     x: 65,
     y: -72 - index * 30,
-    z: 1,
+    z: 0,
     size: 22,
     depth: 5,
     rotation: 0,
@@ -67,8 +67,10 @@ function createDefaultExtraText(index: number): ExtraTextItem {
 }
 
 function App() {
+  const [largeLetterText, setLargeLetterText] = useState("П");
   const [text, setText] = useState("Пример");
-  const [depth, setDepth] = useState(12);
+  const [initialDepth, setInitialDepth] = useState(12);
+  const [nameDepth, setNameDepth] = useState(13);
   const [initialSize, setInitialSize] = useState(150);
   const [nameSize, setNameSize] = useState(52);
   const [initialFontId, setInitialFontId] = useState(DEFAULT_BIG_LETTER_FONT_ID);
@@ -103,8 +105,8 @@ function App() {
   const handleExportSnapshotChange = useCallback((snapshot: ExportSnapshot | null) => {
     setExportSnapshot(snapshot);
   }, []);
+  const cleanLargeLetterText = largeLetterText.trim();
   const cleanText = text.trim() || "А";
-  const initialPreview = Array.from(cleanText)[0].toLocaleUpperCase("ru-RU");
   const initialFont = getCatalogFont(initialFontId);
   const nameFont = getCatalogFont(nameFontId);
   const addDecoration = () => {
@@ -133,8 +135,26 @@ function App() {
   const removeExtraText = (id: string) => {
     setExtraTextItems((current) => current.filter((item) => item.id !== id));
   };
-  const handleDepthChange = (nextDepth: number) => {
-    setDepth(nextDepth);
+  const handleInitialPositionChange = useCallback((x: number, y: number) => {
+    setInitialOffsetX(x);
+    setInitialOffsetY(y);
+  }, []);
+  const handleNamePositionChange = useCallback((x: number, y: number) => {
+    setNameOffsetX(x);
+    setNameOffsetY(y);
+  }, []);
+  const handleDecorationPositionChange = useCallback((id: string, x: number, y: number) => {
+    setDecorations((current) => current.map((item) => (
+      item.id === id ? { ...item, x, y } : item
+    )));
+  }, []);
+  const handleExtraTextPositionChange = useCallback((id: string, x: number, y: number) => {
+    setExtraTextItems((current) => current.map((item) => (
+      item.id === id ? { ...item, x, y } : item
+    )));
+  }, []);
+  const handleInitialDepthChange = (nextDepth: number) => {
+    setInitialDepth(nextDepth);
     setNamePocketDepth((current) => Math.min(current, nextDepth));
   };
   const panelSettings = useMemo(() => ({
@@ -179,9 +199,20 @@ function App() {
 
       <main className="workspace">
         <aside className="sidebar">
-          <h2>Имя</h2>
+          <h2>Текст</h2>
           <label>
-            Текст
+            Большая буква
+            <input
+              type="text"
+              value={largeLetterText}
+              maxLength={1}
+              onChange={(event) => setLargeLetterText(event.target.value)}
+              placeholder="П"
+            />
+          </label>
+
+          <label>
+            Полное имя
             <input
               type="text"
               value={text}
@@ -191,22 +222,10 @@ function App() {
             />
           </label>
 
-          <label>
-            Толщина: <b>{depth} мм</b>
-            <input
-              type="range"
-              min="4"
-              max="30"
-              step="1"
-              value={depth}
-              onChange={(e) => handleDepthChange(Number(e.target.value))}
-            />
-          </label>
-
           <FontPicker
             label="Шрифт большой буквы"
             value={initialFontId}
-            previewText={initialPreview}
+            previewText={cleanLargeLetterText}
             mode="bigLetter"
             onChange={setInitialFontId}
           />
@@ -230,6 +249,16 @@ function App() {
           />
 
           <RangeNumberControl
+            id="initial-depth"
+            label="Толщина большой буквы, мм"
+            value={initialDepth}
+            min={1}
+            max={20}
+            step={0.5}
+            onChange={handleInitialDepthChange}
+          />
+
+          <RangeNumberControl
             id="name-size"
             label="Размер полного имени"
             value={nameSize}
@@ -237,6 +266,16 @@ function App() {
             max={140}
             step={2}
             onChange={setNameSize}
+          />
+
+          <RangeNumberControl
+            id="name-depth"
+            label="Толщина полного имени, мм"
+            value={nameDepth}
+            min={1}
+            max={20}
+            step={0.5}
+            onChange={setNameDepth}
           />
 
           <RangeNumberControl
@@ -279,7 +318,7 @@ function App() {
             enabled={namePocketEnabled}
             tolerance={nameTolerance}
             pocketDepth={namePocketDepth}
-            initialDepth={depth}
+            initialDepth={initialDepth}
             showMainName={showMainName}
             onEnabledChange={setNamePocketEnabled}
             onToleranceChange={setNameTolerance}
@@ -333,14 +372,16 @@ function App() {
           {fontError && <div className="font-error">{fontError}</div>}
 
           <div className="hint">
-            Первая буква — крупная, полное имя — поверх неё. Можно крутить модель мышкой и приближать колёсиком.
+            Большая буква и полное имя настраиваются независимо. Модель можно крутить мышкой и приближать колёсиком.
           </div>
         </aside>
 
         <section className="viewport">
           <Scene
+            initialText={cleanLargeLetterText}
             text={cleanText}
-            depth={depth}
+            initialDepth={initialDepth}
+            nameDepth={nameDepth}
             initialFont={initialFont}
             nameFont={nameFont}
             initialSize={initialSize}
@@ -354,6 +395,10 @@ function App() {
             extraTextItems={extraTextItems}
             pocketSettings={pocketSettings}
             showMainName={showMainName}
+            onInitialPositionChange={handleInitialPositionChange}
+            onNamePositionChange={handleNamePositionChange}
+            onDecorationPositionChange={handleDecorationPositionChange}
+            onExtraTextPositionChange={handleExtraTextPositionChange}
             onFontError={handleFontError}
             onExportSnapshotChange={handleExportSnapshotChange}
           />

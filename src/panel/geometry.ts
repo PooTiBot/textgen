@@ -71,10 +71,11 @@ export function createPanelGeometry(
   thickness: number,
 ) {
   const bevelSize = Math.min(1.5, thickness * 0.15, width * 0.02, height * 0.02);
+  const extrusionDepth = Math.max(0.01, thickness - bevelSize * 2);
   const faceWidth = Math.max(1, width - bevelSize * 2);
   const faceHeight = Math.max(1, height - bevelSize * 2);
   const geometry = new THREE.ExtrudeGeometry(makePanelShape(shape, faceWidth, faceHeight), {
-    depth: thickness,
+    depth: extrusionDepth,
     bevelEnabled: bevelSize > 0,
     bevelThickness: bevelSize,
     bevelSize,

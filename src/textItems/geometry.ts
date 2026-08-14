@@ -46,10 +46,12 @@ export function createGeometryFromShapes(
     bevelEnabled: boolean,
     referenceSize = 40,
 ) {
+    const bevelThickness = bevelEnabled ? Math.min(1.2, depth * 0.12) : 0;
+    const extrusionDepth = Math.max(0.01, depth - bevelThickness * 2);
     const geometry = new THREE.ExtrudeGeometry([...shapes], {
-        depth,
+        depth: extrusionDepth,
         bevelEnabled,
-        bevelThickness: Math.min(1.2, depth * 0.12),
+        bevelThickness,
         bevelSize: Math.min(0.8, referenceSize * 0.025),
         bevelSegments: 3,
         curveSegments: 12,

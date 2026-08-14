@@ -10,6 +10,7 @@ import { createNamePocket } from "../tolerance/createNamePocket";
 import { shapesToClipperPaths, transformClipperPaths } from "../tolerance/polygonUtils";
 import type { NamePocketSettings } from "../tolerance/types";
 import type { PrintablePart } from "./PrintablePart";
+import { placeGeometryBackAt, placeGeometryFrontAt } from "./zPlacement";
 
 type Bounds2D = {
   minX: number;
@@ -25,8 +26,10 @@ export type CompositionFonts = {
 };
 
 export type BuildPrintablePartsOptions = {
+  initialText: string;
   text: string;
-  depth: number;
+  initialDepth: number;
+  nameDepth: number;
   initialSize: number;
   nameSize: number;
   initialOffsetX: number;
@@ -46,6 +49,8 @@ export type BuiltPrintableParts = {
   previewScale: number;
   centerX: number;
   centerY: number;
+  centerZ: number;
+  panelFrontZ: number | null;
   pocketCreated: boolean;
 };
 
@@ -78,63 +83,75 @@ function createPart(
 
 export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltPrintableParts {
   const clean = options.text.trim();
-  const initial = Array.from(clean)[0].toLocaleUpperCase("ru-RU");
-  const initialShapes = createTextShapes(options.fonts.initial, initial, options.initialSize);
+  if (!clean) throw new Error("Полное имя не может быть пустым.");
+
+  const cleanInitial = options.initialText.trim();
+  const initialShapes = cleanInitial
+    ? createTextShapes(options.fonts.initial, cleanInitial, options.initialSize)
+    : [];
   const nameShapes = createTextShapes(options.fonts.name, clean, options.nameSize);
-  let initialGeometry: THREE.BufferGeometry = createGeometryFromShapes(
-    initialShapes,
-    options.depth,
-    !options.pocketSettings.enabled,
-    options.initialSize,
-  );
+  let initialGeometry: THREE.BufferGeometry | null = cleanInitial
+    ? createGeometryFromShapes(
+      initialShapes,
+      options.initialDepth,
+      !options.pocketSettings.enabled,
+      options.initialSize,
+    )
+    : null;
   const nameGeometry = createGeometryFromShapes(
     nameShapes,
-    options.depth + 0.8,
+    options.nameDepth,
     !options.pocketSettings.enabled,
     options.nameSize,
   );
-  const initialBounds = initialGeometry.boundingBox!;
+  const initialBounds = initialGeometry?.boundingBox ?? null;
   const nameBounds = nameGeometry.boundingBox!;
-  const initialWidth = initialBounds.max.x - initialBounds.min.x;
-  const initialX = -initialBounds.min.x + options.initialOffsetX;
-  const initialY = -(initialBounds.min.y + initialBounds.max.y) / 2 + options.initialOffsetY;
+  const initialWidth = initialBounds ? initialBounds.max.x - initialBounds.min.x : 0;
+  const initialX = initialBounds ? -initialBounds.min.x + options.initialOffsetX : 0;
+  const initialY = initialBounds
+    ? -(initialBounds.min.y + initialBounds.max.y) / 2 + options.initialOffsetY
+    : 0;
   const nameX = initialWidth * 0.34 - nameBounds.min.x + options.nameOffsetX;
   const nameY = -(nameBounds.min.y + nameBounds.max.y) / 2 + options.nameOffsetY;
-  const initialPaths = transformClipperPaths(
-    shapesToClipperPaths(initialShapes),
-    initialX,
-    initialY,
-  );
+  const initialPaths = initialGeometry
+    ? transformClipperPaths(shapesToClipperPaths(initialShapes), initialX, initialY)
+    : [];
   const namePaths = transformClipperPaths(
     shapesToClipperPaths(nameShapes),
     nameX,
     nameY,
   );
-  const pocketResult = createNamePocket(
-    initialPaths,
-    namePaths,
-    options.depth,
-    options.pocketSettings,
-  );
+  const pocketResult = initialGeometry
+    ? createNamePocket(
+      initialPaths,
+      namePaths,
+      options.initialDepth,
+      options.pocketSettings,
+    )
+    : null;
 
-  if (pocketResult) {
-    initialGeometry.dispose();
-    initialGeometry = pocketResult.geometry;
-  } else {
-    initialGeometry.translate(initialX, initialY, 0);
-    initialGeometry.computeBoundingBox();
+  if (initialGeometry) {
+    if (pocketResult) {
+      initialGeometry.dispose();
+      initialGeometry = pocketResult.geometry;
+    } else {
+      initialGeometry.translate(initialX, initialY, 0);
+      initialGeometry.computeBoundingBox();
+    }
   }
 
-  nameGeometry.translate(nameX, nameY, options.depth * 0.18);
+  nameGeometry.translate(nameX, nameY, 0);
   nameGeometry.computeBoundingBox();
 
-  const initialPart = createPart(
-    "initial",
-    "initialLetter",
-    "Большая буква",
-    "initial",
-    initialGeometry,
-  );
+  const initialPart = initialGeometry
+    ? createPart(
+      "initial",
+      "initialLetter",
+      "Большая буква",
+      "initial",
+      initialGeometry,
+    )
+    : null;
   const namePart = createPart(
     "name",
     "mainName",
@@ -164,16 +181,20 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
         createExtraTextGeometry(font!, item),
       );
     });
-  const contentParts = [initialPart, namePart, ...decorationParts, ...extraTextParts];
-  const initialBox = initialGeometry.boundingBox!;
+  const contentParts = [
+    ...(initialPart ? [initialPart] : []),
+    namePart,
+    ...decorationParts,
+    ...extraTextParts,
+  ];
   const contentBounds: Bounds2D = {
-    minX: initialBox.min.x,
-    maxX: initialBox.max.x,
-    minY: initialBox.min.y,
-    maxY: initialBox.max.y,
+    minX: Number.POSITIVE_INFINITY,
+    maxX: Number.NEGATIVE_INFINITY,
+    minY: Number.POSITIVE_INFINITY,
+    maxY: Number.NEGATIVE_INFINITY,
   };
 
-  contentParts.slice(1).forEach((part) => {
+  contentParts.forEach((part) => {
     part.geometry.computeBoundingBox();
     expandBounds(contentBounds, part.geometry.boundingBox!);
   });
@@ -183,6 +204,7 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
   const contentCenterX = (contentBounds.minX + contentBounds.maxX) / 2;
   const contentCenterY = (contentBounds.minY + contentBounds.maxY) / 2;
   const panelParts: PrintablePart[] = [];
+  let panelFrontZ: number | null = null;
 
   if (options.panelSettings.enabled) {
     const panelDimensions = options.panelSettings.autoSize
@@ -203,9 +225,9 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
     panelGeometry.translate(
       contentCenterX - (panelBox.min.x + panelBox.max.x) / 2,
       contentCenterY - (panelBox.min.y + panelBox.max.y) / 2,
-      -options.panelSettings.offsetZ - panelBox.max.z,
+      0,
     );
-    panelGeometry.computeBoundingBox();
+    panelFrontZ = placeGeometryFrontAt(panelGeometry, -options.panelSettings.offsetZ);
     panelParts.push(createPart(
       "panel",
       "backPanel",
@@ -227,9 +249,12 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
       frameGeometry.translate(
         contentCenterX - (frameBox.min.x + frameBox.max.x) / 2,
         contentCenterY - (frameBox.min.y + frameBox.max.y) / 2,
-        translatedPanelBox.max.z + options.panelSettings.frameOffsetZ - frameBox.min.z,
+        0,
       );
-      frameGeometry.computeBoundingBox();
+      placeGeometryBackAt(
+        frameGeometry,
+        translatedPanelBox.max.z + options.panelSettings.frameOffsetZ,
+      );
       panelParts.push(createPart(
         "frame",
         "panelFrame",
@@ -239,6 +264,22 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
       ));
     }
   }
+
+  const contentBaseZ = panelFrontZ ?? 0;
+  if (initialGeometry) placeGeometryBackAt(initialGeometry, contentBaseZ);
+  placeGeometryBackAt(nameGeometry, contentBaseZ);
+  decorationParts.forEach((part) => {
+    const item = options.decorations.find(
+      (decoration) => part.id === `decoration:${decoration.id}`,
+    );
+    if (item) placeGeometryBackAt(part.geometry, contentBaseZ + item.z);
+  });
+  extraTextParts.forEach((part) => {
+    const item = options.extraTextItems.find(
+      (extraText) => part.id === `extra-text:${extraText.id}`,
+    );
+    if (item) placeGeometryBackAt(part.geometry, contentBaseZ + item.z);
+  });
 
   const parts = [...panelParts, ...contentParts];
   const compositionBox = new THREE.Box3();
@@ -263,6 +304,8 @@ export function buildPrintableParts(options: BuildPrintablePartsOptions): BuiltP
     previewScale,
     centerX: compositionCenter.x,
     centerY: compositionCenter.y,
+    centerZ: compositionCenter.z,
+    panelFrontZ,
     pocketCreated: Boolean(pocketResult),
   };
 }

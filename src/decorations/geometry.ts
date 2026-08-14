@@ -99,10 +99,11 @@ function createDecorationShape(type: DecorationType, size: number) {
 
 export function createDecorationGeometry(item: DecorationItem) {
     const bevel = Math.min(item.depth * 0.1, item.size * 0.025);
+    const extrusionDepth = Math.max(0.01, item.depth - bevel * 2);
     const geometry = new THREE.ExtrudeGeometry(
         createDecorationShape(item.type, item.size),
         {
-            depth: item.depth,
+            depth: extrusionDepth,
             bevelEnabled: true,
             bevelThickness: bevel,
             bevelSize: bevel,

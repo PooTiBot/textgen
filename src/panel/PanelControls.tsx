@@ -131,17 +131,18 @@ export default function PanelControls({
 
         <RangeNumberControl
           id="panel-thickness"
-          label="Толщина панели"
+          label="Толщина панели, мм"
           value={thickness}
           min={2}
           max={30}
+          step={0.5}
           disabled={!enabled}
           onChange={onThicknessChange}
         />
 
         <RangeNumberControl
           id="panel-offset-z"
-          label="Зазор панели по Z"
+          label="Смещение панели по Z, мм"
           value={offsetZ}
           min={0}
           max={30}
@@ -180,7 +181,7 @@ export default function PanelControls({
 
         <RangeNumberControl
           id="panel-frame-depth"
-          label="Выступ рамки по Z, мм"
+          label="Толщина рамки, мм"
           value={frameDepth}
           min={0.5}
           max={20}

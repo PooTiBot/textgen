@@ -5,11 +5,18 @@ import { shapesToClipperPaths, transformClipperPaths } from "../src/tolerance/po
 import { createGeometryFromShapes, createTextShapes } from "../src/textItems/geometry";
 import { validateExportGeometry } from "../src/export/geometryUtils";
 
-const TEXTS = ["Сергей", "София", "Александр", "Ёжик"];
+const TEXT_CASES = [
+  { initialText: "С", text: "Сергей" },
+  { initialText: "С", text: "София" },
+  { initialText: "А", text: "Александр" },
+  { initialText: "Ё", text: "Ёжик" },
+  { initialText: "И", text: "София" },
+  { initialText: "М", text: "Александр" },
+];
 const TOLERANCES = [0, 0.2, 0.4, 1, 2, 3];
 
-function placeTextPaths(font: Font, text: string) {
-  const initialShapes = createTextShapes(font, Array.from(text)[0], 120);
+function placeTextPaths(font: Font, initialText: string, text: string) {
+  const initialShapes = createTextShapes(font, initialText, 120);
   const nameShapes = createTextShapes(font, text, 42);
   const initialGeometry = createGeometryFromShapes(initialShapes, 8, false);
   const nameGeometry = createGeometryFromShapes(nameShapes, 8, false);
@@ -40,8 +47,8 @@ export function runToleranceGeometryCheck(fontBuffers: Record<string, ArrayBuffe
   for (const [fontName, buffer] of Object.entries(fontBuffers)) {
     const font = parse(buffer);
 
-    for (const text of TEXTS) {
-      const { initialPaths, namePaths } = placeTextPaths(font, text);
+    for (const { initialText, text } of TEXT_CASES) {
+      const { initialPaths, namePaths } = placeTextPaths(font, initialText, text);
       const basePaths = createExpandedNamePaths(namePaths, 0);
       const baseBounds = getBoundsPathsD(basePaths);
       let previousArea = solidArea(basePaths);
@@ -52,7 +59,7 @@ export function runToleranceGeometryCheck(fontBuffers: Record<string, ArrayBuffe
         const expandedBounds = getBoundsPathsD(expanded);
 
         if (expandedArea + 0.001 < previousArea) {
-          throw new Error(`${fontName}/${text}: offset area decreased at ${tolerance} mm.`);
+          throw new Error(`${fontName}/${initialText}/${text}: offset area decreased at ${tolerance} mm.`);
         }
 
         if (tolerance > 0 && (
@@ -61,7 +68,7 @@ export function runToleranceGeometryCheck(fontBuffers: Record<string, ArrayBuffe
           || expandedBounds.top > baseBounds.top - tolerance * 0.7
           || expandedBounds.bottom < baseBounds.bottom + tolerance * 0.7
         )) {
-          throw new Error(`${fontName}/${text}: offset did not expand uniformly at ${tolerance} mm.`);
+          throw new Error(`${fontName}/${initialText}/${text}: offset did not expand uniformly at ${tolerance} mm.`);
         }
 
         const pocket = createNamePocket(initialPaths, namePaths, 8, {
@@ -74,7 +81,7 @@ export function runToleranceGeometryCheck(fontBuffers: Record<string, ArrayBuffe
           const initialBounds = getBoundsPathsD(initialPaths);
           const nameBounds = getBoundsPathsD(namePaths);
           throw new Error(
-            `${fontName}/${text}: pocket intersection is empty; initial=${JSON.stringify(initialBounds)}, name=${JSON.stringify(nameBounds)}, paths=${initialPaths.length}/${namePaths.length}.`,
+            `${fontName}/${initialText}/${text}: pocket intersection is empty; initial=${JSON.stringify(initialBounds)}, name=${JSON.stringify(nameBounds)}, paths=${initialPaths.length}/${namePaths.length}.`,
           );
         }
         validateExportGeometry(pocket.geometry);
